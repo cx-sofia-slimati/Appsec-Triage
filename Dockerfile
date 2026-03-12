@@ -3,7 +3,7 @@
 FROM alpine:3.19
 
 # Pin package versions for security and reproducibility
-# TODO: Regularly update these versions and check for security advisories
+# TODO: Regularly update these versions and check for security advisoriess
 RUN apk --no-cache add \
     git=2.43.0-r0 \
     python3=3.11.6-r1 \
