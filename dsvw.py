@@ -55,10 +55,18 @@ class ReqHandler(http.server.BaseHTTPRequestHandler):
                         cursor.execute("SELECT id, comment, time FROM comments")
                         content += "<div><span>Comment(s):</span></div><table><thead><th>id</th><th>comment</th><th>time</th></thead>%s</table>%s" % ("".join("<tr>%s</tr>" % "".join("<td>%s</td>" % ("-" if _ is None else _) for _ in row) for row in cursor.fetchall()), HTML_POSTFIX)
                 elif "include" in params:
-                    backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params["include"], "rb") if not "://" in params["include"] else urllib.request.urlopen(params["include"])).read(), {"DOCUMENT_ROOT": os.getcwd(), "HTTP_USER_AGENT": self.headers.get("User-Agent"), "REMOTE_ADDR": self.client_address[0], "REMOTE_PORT": self.client_address[1], "PATH": path, "QUERY_STRING": query}
-                    exec(program, envs)
-                    content += sys.stdout.getvalue()
-                    sys.stdout = backup
+                    # SECURITY FIX: Removed dangerous exec() call that allowed arbitrary code execution
+                    # Instead, display the file content safely without execution
+                    try:
+                        if "://" in params["include"]:
+                            file_content = urllib.request.urlopen(params["include"]).read().decode('utf-8', errors='replace')
+                        else:
+                            with open(params["include"], "r", encoding='utf-8', errors='replace') as f:
+                                file_content = f.read()
+                        # Display content safely by escaping HTML to prevent XSS
+                        content += "<div><span>File Content:</span></div><pre>%s</pre>%s" % (html.escape(file_content), HTML_POSTFIX)
+                    except Exception as e:
+                        content += "<div><span>Error reading file:</span> %s</div>%s" % (html.escape(str(e)), HTML_POSTFIX)
                 elif "redir" in params:
                     content = content.replace("<head>", "<head><meta http-equiv=\"refresh\" content=\"0; url=%s\"/>" % params["redir"])
                 if HTML_PREFIX in content and HTML_POSTFIX not in content:
